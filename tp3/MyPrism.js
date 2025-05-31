@@ -1,0 +1,98 @@
+import { CGFobject } from "../lib/CGF.js";
+/**
+ * MyQuad
+ * @constructor
+ * @param scene - Reference to MyScene object
+ */
+export class MyPrism extends CGFobject {
+  constructor(scene, slices, stacks) {
+    super(scene);
+
+    this.slices = slices;
+
+    this.stacks = stacks;
+
+    this.initBuffers();
+  }
+
+  initBuffers() {
+    // Initialize center vertice on origin
+    this.vertices = [0,0,0];
+    this.indices = [];
+    this.normals = [0,0,-1];
+
+    for( let i = 0; i < this.slices; i++){
+      let angle = (i * 2 * Math.PI) / this.slices;
+
+      let x = Math.cos(angle);
+      let y = Math.sin(angle);
+      this.vertices.push(x,y,0);
+      this.indices.push(i+1,0, (i+1) % this.slices + 1);
+      this.normals.push(0,0,-1);
+    }
+    let base = this.vertices.length / 3;
+    // Vertices + normals 
+    for( let stack = 0; stack <= this.stacks; stack++){
+      for (let i = 0; i < this.slices; i++) {
+        let angle = (i * 2 * Math.PI) / this.slices;
+
+        let x = Math.cos(angle);
+        let y = Math.sin(angle);
+        let halfAngle = angle - (2*Math.PI) / this.slices / 2;
+        let halfAngle2 = angle +  (2*Math.PI)  / this.slices / 2
+        let normalX1 = Math.cos(halfAngle);
+        let normalY1 = Math.sin(halfAngle);
+        let normalX2 = Math.cos(halfAngle2);
+        let normalY2 = Math.sin(halfAngle2);
+        this.vertices.push(x, y, stack / this.stacks);
+        this.vertices.push(x, y, stack /this.stacks);
+        this.normals.push(normalX1,normalY1,0); 
+        this.normals.push(normalX2,normalY2,0);
+
+
+      }
+    }
+
+    // Triangles 
+    for( let stack = 0; stack < this.stacks; stack++ ){
+      for( let i = 0; i < this.slices ; i++){
+        let currBase = stack*this.slices;
+        let nextStackBase = (stack+1)*this.slices ;
+        this.indices.push((currBase + i)*2 + base , (currBase + ( i + 1 ) % this.slices)*2 +  base, (nextStackBase + i)*2 +  base);
+        this.indices.push((currBase + ( i + 1 ) % this.slices)*2 +  base, (nextStackBase + ( i + 1 ) % this.slices)*2  +  base, ((nextStackBase + i)*2) + base);
+
+
+      }
+    }
+    let front = this.vertices.length / 3 ;
+    this.vertices.push(0,0,1);
+    this.normals.push(0,0,1);
+    for( let i = 0; i < this.slices; i++){
+      let angle = (i * 2 * Math.PI) / this.slices;
+
+      let x = Math.cos(angle);
+      let y = Math.sin(angle);
+      this.vertices.push(x,y,1);
+      this.indices.push( front,front + i + 1,  front + (i+1) % this.slices +1 );
+      this.normals.push(0,0,1);
+    }
+
+    
+
+    
+    
+    //The defined indices (and corresponding vertices)
+    //will be read in groups of three to draw triangles
+    this.primitiveType = this.scene.gl.TRIANGLES;
+
+    this.initGLBuffers();
+  }
+
+  updateBuffers(complexity){
+    this.slices = 3 + Math.round(9 * complexity); //complexity varies 0-1, so slices varies 3-12
+
+    // reinitialize buffers
+    this.initBuffers();
+    this.initNormalVizBuffers();
+  }
+}
